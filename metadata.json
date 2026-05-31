@@ -1,0 +1,6 @@
+{
+  "name": "Surgical Supply Chain",
+  "description": "An interactive dashboard to manage surgical instrument inventory, local hospital orders, distributor logistics, and emergency dispatch status in real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
