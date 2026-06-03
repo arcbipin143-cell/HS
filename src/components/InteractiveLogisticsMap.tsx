@@ -4,13 +4,12 @@
  */
 
 import React, { useState } from 'react';
-import { HospitalNode, LogisticsVehicle, DispatchOrder } from '../types';
+import { HospitalNode, DispatchOrder } from '../types';
 import { WAREHOUSE_COORDINATES } from '../initialData';
-import { Truck, Home, ShieldAlert, Navigation, Eye, FileText, Phone } from 'lucide-react';
+import { Home, Navigation, FileText, Phone } from 'lucide-react';
 
 interface InteractiveLogisticsMapProps {
   hospitals: HospitalNode[];
-  vehicles: LogisticsVehicle[];
   orders: DispatchOrder[];
   onSelectHospital: (hospital: HospitalNode) => void;
   selectedHospital: HospitalNode | null;
@@ -19,7 +18,6 @@ interface InteractiveLogisticsMapProps {
 
 export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = ({
   hospitals,
-  vehicles,
   orders,
   onSelectHospital,
   selectedHospital,
@@ -42,31 +40,31 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
         <div>
           <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-            <Navigation className="w-4 h-4 text-emerald-400 rotate-45" /> Live Logistics Tracking Grid
+            <Navigation className="w-4 h-4 text-emerald-400 rotate-45" /> Store Refill Distribution Network
           </h2>
-          <p className="text-xs text-slate-400">Interactive telemetry. Hover nodes for contact data, click to request emergency delivery.</p>
+          <p className="text-xs text-slate-400">Interactive retail map. Hover nodes for contact data, click to initiate direct stock shipment requests.</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>
-            <span className="text-slate-300">Hub</span>
+            <span className="text-slate-300">Wholesale Depot</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-            <span className="text-slate-300">Critical</span>
+            <span className="text-slate-300">Critical Alert</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-            <span className="text-slate-300">Urgent</span>
+            <span className="text-slate-300">Low Stock</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span className="text-slate-300">Normal</span>
+            <span className="text-slate-300">Stocked</span>
           </div>
         </div>
       </div>
 
-      {/* Grid Canvas Canvas */}
+      {/* Grid Canvas */}
       <div className="relative flex-1 w-full bg-slate-950 rounded-lg overflow-hidden border border-slate-900 min-h-[340px]" id="logistics-map-grid">
         {/* Aesthetic Tactical Mesh Overlay */}
         <div 
@@ -86,7 +84,7 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
           <line x1="0" y1="50" x2="100" y2="50" stroke="#1e293b" strokeWidth="0.1" />
           <line x1="50" y1="0" x2="50" y2="100" stroke="#1e293b" strokeWidth="0.1" />
           
-          {/* Dispatch Track Routes (Warehouse Hub -> Hospitals) */}
+          {/* Dispatch Track Routes (Warehouse Hub -> Retailers) */}
           {hospitals.map((h) => {
             const status = getNodeStatus(h.id);
             let strokeColor = '#334155'; // default slate-700
@@ -132,15 +130,15 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
             );
           })}
 
-          {/* Central logistics warehouse node */}
+          {/* Central Wholesale depot node */}
           <g transform={`translate(${WAREHOUSE_COORDINATES.x}, ${WAREHOUSE_COORDINATES.y})`}>
             {/* Pulsing glow rings around hub */}
-            <circle r="4.5" fill="#3b82f6" fillOpacity="0.1" className="animate-pulse-ring" />
-            <circle r="2.8" fill="#1d4ed8" fillOpacity="0.4" />
-            <circle r="1.5" fill="#3b82f6" />
+            <circle r="4.5" fill="#38bdf8" fillOpacity="0.1" className="animate-pulse-ring" />
+            <circle r="2.8" fill="#0284c7" fillOpacity="0.4" />
+            <circle r="1.5" fill="#38bdf8" />
           </g>
 
-          {/* Hospital Nodes */}
+          {/* Retailer Nodes */}
           {hospitals.map((h) => {
             const status = getNodeStatus(h.id);
             const isSelected = selectedHospital?.id === h.id;
@@ -197,49 +195,17 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
               </g>
             );
           })}
-
-          {/* Active Logistics Vehicles */}
-          {vehicles.map((v) => {
-            if (v.status === 'idle') return null;
-
-            // Vehicle visual indicator color mapping
-            let courierColor = '#38bdf8'; // light blue cargo
-            if (v.type === 'emergency-courier') {
-              courierColor = '#ec4899'; // pink hyper service
-            } else if (v.type === 'refrigerated-truck') {
-              courierColor = '#22d3ee'; // cold cyan
-            }
-
-            return (
-              <g 
-                key={v.id} 
-                transform={`translate(${v.x}, ${v.y})`}
-                className="transition-all duration-75"
-              >
-                {/* Soft pulse tracking tail */}
-                <circle r="2.2" fill={courierColor} fillOpacity="0.15" />
-                <circle r="1.3" fill={courierColor} stroke="#0f172a" strokeWidth="0.3" />
-                {/* Tiny movement orientation vector dot */}
-                <circle 
-                  r="0.5" 
-                  cx={v.status === 'returning' ? -0.5 : 0.5} 
-                  cy={v.status === 'returning' ? -0.5 : 0.5} 
-                  fill="#ffffff" 
-                />
-              </g>
-            );
-          })}
         </svg>
 
         {/* Floating Warehousing label */}
         <div 
-          className="absolute border border-blue-500/30 bg-slate-900/90 text-[10px] py-0.5 px-2 rounded-md font-mono text-blue-400 font-semibold flex items-center gap-1 pr-1.5 shadow-md shadow-blue-950/50"
+          className="absolute border border-sky-500/30 bg-slate-900/90 text-[10px] py-0.5 px-2 rounded-md font-mono text-sky-450 font-semibold flex items-center gap-1 pr-1.5 shadow-md shadow-sky-950/50"
           style={{ top: '53%', left: '50.5%', transform: 'translate(-50%, -50%)' }}
         >
-          <Home className="w-2.5 h-2.5 text-blue-400" /> WAREHOUSE
+          🏪 WHOLESALE DEPOT
         </div>
 
-        {/* Labels for hospitals directly on map */}
+        {/* Labels for hospitals/retailers directly on map */}
         {hospitals.map(h => (
           <div
             key={`label-${h.id}`}
@@ -254,8 +220,8 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
               left: `${h.coordinates.x}%` 
             }}
           >
-            {h.type === 'Trauma Center' ? '🏥 ' : h.type === 'Surgical Pavilion' ? '🫀 ' : h.type === 'Childrens Hospital' ? '🧸 ' : '🩺 '}
-            {h.name.replace(" Specialty Surgery Clinic", " Clinic").replace(" Cardio-Surgical Pavilion", " Pavilion").replace(" Level I Trauma Center", " Trauma")}
+            {h.type === 'Retail Pharmacy Center' ? '💊 ' : '📦 '}
+            {h.name}
           </div>
         ))}
 
@@ -272,9 +238,9 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
             <div className="text-[10px] space-y-0.5 text-slate-300">
               <div className="flex justify-between"><span>Type:</span> <span className="font-sans font-medium">{hoveredNode.type}</span></div>
               <div className="flex justify-between"><span>Urgency:</span> <span className={`font-sans font-bold uppercase rounded px-1 text-[9px] ${
-                hoveredNode.urgency === 'high' ? 'bg-red-950/80 text-red-400 border border-red-900/50' : 
+                hoveredNode.urgency === 'high' ? 'bg-red-950/80 text-red-400 border border-red-900/50 animate-pulse' : 
                 hoveredNode.urgency === 'medium' ? 'bg-amber-950/80 text-amber-400 border border-amber-900/50' : 
-                'bg-slate-800 text-slate-300'
+                'bg-slate-800 text-slate-300 pointer-events-none'
               }`}>{hoveredNode.urgency}</span></div>
               <div className="flex justify-between items-center pt-1 border-t border-slate-800 mt-1">
                 <span>Contact:</span> 
@@ -290,12 +256,12 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
         <div className="mt-3 p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-200">
           <div className="space-y-0.5">
             <div className="text-xs text-sky-400 font-mono flex items-center gap-1.5 uppercase tracking-wider font-semibold">
-              <span>Selected Node:</span>
+              <span>Selected Outlet:</span>
               <span className="text-slate-300 italic font-normal normal-case">{selectedHospital.type}</span>
             </div>
             <div className="text-sm font-semibold text-slate-100">{selectedHospital.name}</div>
             <div className="text-[11px] text-slate-400 flex items-center gap-3">
-              <span className="flex items-center gap-1"><Home className="w-3 h-3" /> {selectedHospital.address}</span>
+              <span className="flex items-center gap-1">🏪 {selectedHospital.address}</span>
               <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedHospital.contactNumber}</span>
             </div>
           </div>
@@ -305,7 +271,7 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
               onClick={() => onQuickOrder(selectedHospital)}
               className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 transition-colors text-white text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/50 cursor-pointer"
             >
-              <FileText className="w-3.5 h-3.5" /> Dispatch Materials
+              <FileText className="w-3.5 h-3.5" /> Book Refill Order
             </button>
             <button
               onClick={() => onSelectHospital(selectedHospital)}
@@ -318,7 +284,7 @@ export const InteractiveLogisticsMap: React.FC<InteractiveLogisticsMapProps> = (
         </div>
       ) : (
         <div className="mt-3 p-3.5 bg-slate-950/35 border border-dashed border-slate-800/80 rounded-lg text-center text-xs text-slate-400">
-          💡 Click a hospital node or a route on the tracking grid to establish connection protocols or trigger materials dispatching.
+          💡 Click a retail outlet node on the grid to establish connections or prepare a direct stock supply demand bundle.
         </div>
       )}
     </div>

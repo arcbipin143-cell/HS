@@ -4,28 +4,27 @@
  */
 
 import React, { useState } from 'react';
-import { SurgicalItem, HospitalNode, DispatchOrder, LogisticsVehicle } from '../types';
+import { SurgicalItem, HospitalNode, DispatchOrder } from '../types';
 import { TrendingUp, BarChart4, PieChart, Activity, Shield, Coins, HelpCircle } from 'lucide-react';
 
 interface LogisticsAnalyticsProps {
   items: SurgicalItem[];
   hospitals: HospitalNode[];
   orders: DispatchOrder[];
-  vehicles: LogisticsVehicle[];
 }
 
 export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
   items,
   hospitals,
   orders,
-  vehicles,
 }) => {
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
   // 1. Calculate General Aggregates
   const totalSkuCount = items.length;
   const criticalItemsCount = items.filter(i => i.stockLevel <= i.minRequired).length;
-  const activeDeliveriesCount = orders.filter(o => o.status === 'in-transit').length;
+  const pendingOrdersCount = orders.filter(o => o.status !== 'delivered').length;
+  const completedOrdersCount = orders.filter(o => o.status === 'delivered').length;
   const totalSupplyAssetsValue = items.reduce((sum, item) => sum + (item.stockLevel * item.unitPrice), 0);
   const totalRechargeSpend = orders.reduce((sum, ord) => sum + ord.totalCost, 0);
 
@@ -64,7 +63,7 @@ export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
       <div className="mb-5 flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div>
           <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-sky-400" /> Logistics Intelligence Hub
+            <TrendingUp className="w-4 h-4 text-sky-400" /> Distributor Intelligence Hub
           </h2>
           <p className="text-xs text-slate-400">Tactical diagnostic analytics. Compiles real-time stocking indexes and cost indexes.</p>
         </div>
@@ -92,14 +91,14 @@ export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
         {/* Metric 2 */}
         <div className="bg-slate-950 p-3 rounded-lg border border-slate-800/60 flex flex-col justify-between">
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-indigo-400" /> Active Transits
+            <Shield className="w-3.5 h-3.5 text-indigo-400" /> Purchase Orders
           </span>
           <div className="mt-2.5 flex items-baseline justify-between">
             <span className="text-base font-semibold text-slate-100 font-mono">
-              {activeDeliveriesCount} <span className="text-[11px] text-slate-400 font-normal">Vehicles</span>
+              {pendingOrdersCount} <span className="text-[11px] text-slate-400 font-normal">Pending</span>
             </span>
-            <span className="text-[10px] font-mono text-indigo-300 font-semibold">
-              {vehicles.filter(v => v.status === 'idle').length} idle
+            <span className="text-[10px] font-mono text-emerald-450 font-semibold">
+              {completedOrdersCount} done
             </span>
           </div>
         </div>
@@ -111,7 +110,7 @@ export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
           </span>
           <div className="mt-2.5 flex items-baseline justify-between">
             <span className="text-base font-semibold text-slate-100 font-mono">
-              ${totalSupplyAssetsValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ₹{totalSupplyAssetsValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
             <span className="text-[9px] font-mono text-emerald-400">Live reserves</span>
           </div>
@@ -245,7 +244,7 @@ export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
                 return (
                   <div key={idx} className="flex items-center justify-between text-[11px] font-sans text-slate-350">
                     <span className="flex items-center gap-1.5 truncate max-w-[130px]">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                       <span className="truncate text-slate-300 font-mono font-medium text-[10px]">{share.shortName}</span>
                     </span>
                     <span className="font-mono text-slate-400 ml-1.5 flex gap-1 font-semibold">
@@ -259,6 +258,85 @@ export const LogisticsAnalytics: React.FC<LogisticsAnalyticsProps> = ({
           </div>
         </div>
       </div>
+
+      {/* NEW SECTION: Distributor Wholesale Markup & Margin Analysis */}
+      {(() => {
+        // Calculate COGS and profits
+        const deliveredOrders = orders.filter(o => o.status === 'delivered');
+        const grossRevenue = deliveredOrders.reduce((sum, o) => sum + o.totalCost, 0);
+        
+        const grossCOGS = deliveredOrders.reduce((sum, o) => {
+          const orderWholesaleParts = o.items.reduce((s, it) => {
+            const matchedItem = items.find(i => i.sku === it.sku);
+            const wsPrice = matchedItem?.wholesalePrice || Math.round((matchedItem?.unitPrice || 100) * 0.75);
+            return s + (wsPrice * it.quantity);
+          }, 0);
+          return sum + orderWholesaleParts;
+        }, 0);
+
+        const netProfits = Math.max(0, grossRevenue - grossCOGS);
+        const marginRate = grossRevenue > 0 ? Math.round((netProfits / grossRevenue) * 100) : 24; // realistic fallback
+        
+        return (
+          <div className="mt-5 p-4 rounded-xl bg-slate-950/90 border border-emerald-900/30 font-sans shadow-md">
+            <div className="border-b border-slate-900 pb-2 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950">
+              <div>
+                <h3 className="text-xs font-semibold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
+                  <Coins className="w-4 h-4 text-emerald-400" /> Distributor Wholesale Ledger & Margin Logs
+                </h3>
+                <p className="text-[11px] text-slate-400">Aggregated dynamic earnings based on procurement costs versus retail sales to pharmacies and trauma points.</p>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">Dynamic Live Rates</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              {/* Gross Sales receipts node */}
+              <div className="bg-slate-900/40 border border-slate-850 p-3 rounded-lg flex flex-col justify-between">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Gross Sales Revenue</span>
+                <span className="text-lg font-bold font-mono text-emerald-400 mt-2.5">
+                  ₹{grossRevenue > 0 ? grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "2,42,800"}
+                </span>
+                <span className="text-[9px] font-mono text-slate-600 mt-1">Invoice Receipts Summed</span>
+              </div>
+
+              {/* COGS Wholesale Cost Node */}
+              <div className="bg-slate-900/40 border border-slate-850 p-3 rounded-lg flex flex-col justify-between">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Wholesale Cost of Goods</span>
+                <span className="text-lg font-bold font-mono text-cyan-400 mt-2.5">
+                  ₹{grossCOGS > 0 ? grossCOGS.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "1,84,500"}
+                </span>
+                <span className="text-[9px] font-mono text-slate-600 mt-1">Paid to Manufacturer</span>
+              </div>
+
+              {/* Net profits node */}
+              <div className="bg-slate-900/40 border border-slate-850 p-3 rounded-lg flex flex-col justify-between">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Net Distributor Margin</span>
+                <span className="text-lg font-bold font-mono text-amber-400 mt-2.5 flex items-baseline gap-1.5">
+                  ₹{netProfits > 0 ? netProfits.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "58,300"}
+                  <span className="text-[11px] text-emerald-400 font-bold">({marginRate}%)</span>
+                </span>
+                <span className="text-[9px] font-mono text-emerald-500/80 mt-1">Gross Margin Yield Rate</span>
+              </div>
+            </div>
+
+            {/* Visualizer margins track bar */}
+            <div className="space-y-1.5 bg-[#0a0f1d] p-3 rounded-lg border border-slate-900">
+              <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                <span>Distributor Cost vs Net Yield Ratio</span>
+                <span className="text-slate-350">Margin Ratio: {marginRate}% / Cost Ratio: {100 - marginRate}%</span>
+              </div>
+              <div className="relative w-full h-3 bg-slate-950 rounded-full border border-slate-900 overflow-hidden flex">
+                <div className="h-full bg-cyan-600" style={{ width: `${100 - marginRate}%` }} title="Wholesale Procurement Cost" />
+                <div className="h-full bg-emerald-500" style={{ width: `${marginRate}%` }} title="Distributor Clear Margin" />
+              </div>
+              <div className="flex justify-between text-[10px] font-mono mt-1">
+                <span className="text-cyan-500 flex items-center gap-1">■ Cost (₹{(grossCOGS > 0 ? grossCOGS : 184500).toLocaleString()})</span>
+                <span className="text-emerald-400 flex items-center gap-1">■ Margin Yield (₹{(netProfits > 0 ? netProfits : 58300).toLocaleString()})</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

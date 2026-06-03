@@ -11,7 +11,8 @@ export interface SurgicalItem {
   minRequired: number; // Safety trigger point
   capacity: number;    // Ideal max stocking level
   unit: string;
-  unitPrice: number;
+  unitPrice: number;   // Selling price to retailers (Retail/List Price)
+  wholesalePrice?: number; // Cost price paid to manufacturers
   supplier: string;
   lastUpdated: string;
 }
@@ -19,7 +20,7 @@ export interface SurgicalItem {
 export interface HospitalNode {
   id: string;
   name: string;
-  type: 'Trauma Center' | 'Surgical Pavilion' | 'Childrens Hospital' | 'Outpatient Clinic';
+  type: 'Trauma Center' | 'Surgical Pavilion' | 'Childrens Hospital' | 'Outpatient Clinic' | 'Retail Pharmacy Center' | 'Franchise Distribution Hub';
   coordinates: { x: number; y: number };
   urgency: 'low' | 'medium' | 'high';
   contactNumber: string;

@@ -41,6 +41,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   const [capacity, setCapacity] = useState(1000);
   const [unit, setUnit] = useState('unit');
   const [unitPrice, setUnitPrice] = useState(150);
+  const [wholesalePrice, setWholesalePrice] = useState(100);
   const [formError, setFormError] = useState('');
 
   // Editing state
@@ -77,6 +78,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     setCapacity(item.capacity);
     setUnit(item.unit);
     setUnitPrice(item.unitPrice);
+    setWholesalePrice(item.wholesalePrice || Math.round(item.unitPrice * 0.75));
     setFormError('');
     setShowAddForm(true);
 
@@ -97,6 +99,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     setCapacity(1000);
     setUnit('unit');
     setUnitPrice(150);
+    setWholesalePrice(100);
     setFormError('');
     setEditingSku(null);
     setShowAddForm(false);
@@ -129,6 +132,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
       capacity: Number(capacity) || 1000,
       unit,
       unitPrice: Number(unitPrice) || 0,
+      wholesalePrice: Number(wholesalePrice) || Math.round(Number(unitPrice) * 0.75),
       lastUpdated: new Date().toLocaleDateString('en-US', { hour: '2-digit', minute: '2-digit' }),
     };
 
@@ -291,7 +295,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
               <label className="block text-[10px] font-mono text-slate-400 mb-1">STOCK LEVEL</label>
               <input
@@ -323,13 +327,35 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-mono text-slate-400 mb-1">UNIT COST (₹ INR)</label>
+              <label className="block text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between">
+                <span>WHOLESALE COST</span>
+                <span className="text-sky-400 text-[9px]">Buy Rate</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={wholesalePrice}
+                onChange={(e) => {
+                  const ws = Math.max(0, parseFloat(e.target.value) || 0);
+                  setWholesalePrice(ws);
+                  if (unitPrice === 0 || unitPrice < ws) {
+                    setUnitPrice(Math.round(ws * 1.2));
+                  }
+                }}
+                className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between">
+                <span>RETAIL SELL PRICE</span>
+                <span className="text-amber-400 text-[9px]">Sell Rate</span>
+              </label>
               <input
                 type="number"
                 min="0"
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none"
+                className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none font-mono"
               />
             </div>
           </div>
@@ -448,11 +474,22 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       </span>
                     </td>
                     <td className="py-3 px-2">
-                      <div className="text-xs text-slate-300 font-sans">{item.supplier}</div>
-                      <div className="text-[9px] text-slate-500 font-mono flex items-center gap-1">
-                        <span>Price: ₹{item.unitPrice}</span>
-                        <span>•</span>
-                        <span>Update: {item.lastUpdated}</span>
+                      <div className="text-xs text-slate-300 font-sans leading-tight font-medium">{item.supplier}</div>
+                      <div className="text-[10px] text-slate-400 font-mono flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                        <span className="text-slate-550">
+                          Buy: <span className="text-sky-400 font-semibold">₹{(item.wholesalePrice || Math.round(item.unitPrice * 0.75)).toLocaleString()}</span>
+                        </span>
+                        <span className="text-slate-700 font-light">•</span>
+                        <span className="text-slate-550">
+                          Sell: <span className="text-amber-400 font-semibold">₹{item.unitPrice.toLocaleString()}</span>
+                        </span>
+                        <span className="text-slate-700 font-light">•</span>
+                        <span className="text-slate-550">
+                          Margin: <span className="text-emerald-400 font-semibold">+{Math.max(0, Math.round(((item.unitPrice - (item.wholesalePrice || Math.round(item.unitPrice * 0.75))) / (item.wholesalePrice || Math.round(item.unitPrice * 0.75))) * 100))}%</span>
+                        </span>
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono mt-0.5">
+                        Logistics Trace: {item.lastUpdated}
                       </div>
                     </td>
                     

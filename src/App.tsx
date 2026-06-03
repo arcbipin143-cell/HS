@@ -8,14 +8,12 @@ import {
   SurgicalItem, 
   HospitalNode, 
   DispatchOrder, 
-  LogisticsVehicle, 
   ActivityLog, 
   OrderPriority 
 } from './types';
 import { 
   INITIAL_ITEMS, 
   INITIAL_HOSPITALS, 
-  INITIAL_VEHICLES, 
   INITIAL_ORDERS, 
   INITIAL_LOGS,
   WAREHOUSE_COORDINATES
@@ -27,17 +25,13 @@ import { LogisticsAnalytics } from './components/LogisticsAnalytics';
 import { SupplierManager } from './components/SupplierManager';
 import { HospitalManager } from './components/HospitalManager';
 import { BillingLetterhead } from './components/BillingLetterhead';
+import { RedistributionHub } from './components/RedistributionHub';
 import { 
   Activity, 
   Play, 
   Pause, 
   ShieldAlert, 
   Flame, 
-  Clock, 
-  ChevronRight, 
-  CheckCircle,
-  AlertOctagon,
-  LifeBuoy,
   RefreshCw,
   Database
 } from 'lucide-react';
@@ -65,11 +59,6 @@ export default function App() {
     const saved = localStorage.getItem('surg_hospitals');
     return saved ? JSON.parse(saved) : INITIAL_HOSPITALS;
   });
-  
-  const [vehicles, setVehicles] = useState<LogisticsVehicle[]>(() => {
-    const saved = localStorage.getItem('surg_vehicles');
-    return saved ? JSON.parse(saved) : INITIAL_VEHICLES;
-  });
 
   const [orders, setOrders] = useState<DispatchOrder[]>(() => {
     const saved = localStorage.getItem('surg_orders');
@@ -80,6 +69,22 @@ export default function App() {
     const saved = localStorage.getItem('surg_logs');
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
   });
+
+  const [nodeInventories, setNodeInventories] = useState<Record<string, Record<string, number>>>(() => {
+    const saved = localStorage.getItem('distributor_nodeInventories');
+    if (saved) return JSON.parse(saved);
+    return {
+      "H-AIIMS": { "S-INST-001": 25, "S-CONS-003": 12 },
+      "H-APOLLO": { "S-SPEC-002": 8, "S-PPE-006": 40 },
+      "H-AUSHADHI": { "S-CONS-010": 30, "S-PPE-007": 15 },
+      "H-SANJIVANI": { "S-INST-001": 15, "S-CONS-010": 20 },
+      "H-FRANCHISE-CENTRAL": { "S-SPEC-009": 4, "S-INST-008": 6 }
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('distributor_nodeInventories', JSON.stringify(nodeInventories));
+  }, [nodeInventories]);
 
   // --- Visual & Simulation States ---
   const [selectedHospital, setSelectedHospital] = useState<HospitalNode | null>(null);
@@ -99,10 +104,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('surg_suppliers', JSON.stringify(suppliers));
   }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem('surg_vehicles', JSON.stringify(vehicles));
-  }, [vehicles]);
 
   useEffect(() => {
     localStorage.setItem('surg_orders', JSON.stringify(orders));
@@ -130,170 +131,66 @@ export default function App() {
     }
     const urgentOrders = orders.filter(o => o.priority === 'critical' && o.status !== 'delivered');
     if (urgentOrders.length > 0) {
-      newAlerts.push(`VITAL TRAUMA NOTICE: Level-I Trauma Center has ${urgentOrders.length} critical bypass dispatches currently unassigned!`);
+      newAlerts.push(`VITAL REFILL REQUEST: Retailer outlets have ${urgentOrders.length} critical depletion orders awaiting approval!`);
     }
     setSystemAlerts(newAlerts);
   }, [items, orders]);
 
   // --- Synchronous Simulation Telemetry Tick (100ms interval) ---
+  // --- Autonomous Store Refill Generator Sim Ticker ---
   useEffect(() => {
     let intervalId: any = null;
 
     if (simulationRunning) {
       intervalId = setInterval(() => {
-        let deliveredOrders: { orderId: string; hospitalName: string }[] = [];
-        let completedVehicles: string[] = [];
-
-        // We will process vehicle telemetry tracking, moving vehicles along their respective grid routes
-        setVehicles(prevVehicles => {
-          return prevVehicles.map(v => {
-            if (v.status === 'idle') return v;
-
-            // Transiting materials to destination
-            if (v.status === 'en-route') {
-              if (!v.currentOrderId || !v.currentDestination) {
-                return { ...v, status: 'returning', progress: 1 };
-              }
-
-              const nextProgress = v.progress + v.speed * simulationSpeed;
-              if (nextProgress >= 1) {
-                // Arrived at surgical center!
-                deliveredOrders.push({
-                  orderId: v.currentOrderId,
-                  hospitalName: v.currentDestination.name
-                });
-                
-                const destNode = hospitals.find(h => h.id === v.currentDestination?.id);
-                const currentCoordX = destNode ? destNode.coordinates.x : WAREHOUSE_COORDINATES.x;
-                const currentCoordY = destNode ? destNode.coordinates.y : WAREHOUSE_COORDINATES.y;
-
-                return {
-                  ...v,
-                  status: 'returning',
-                  progress: 1,
-                  x: currentCoordX,
-                  y: currentCoordY
-                };
-              } else {
-                // Stepping closer
-                const destNode = hospitals.find(h => h.id === v.currentDestination?.id);
-                const destX = destNode ? destNode.coordinates.x : WAREHOUSE_COORDINATES.x;
-                const destY = destNode ? destNode.coordinates.y : WAREHOUSE_COORDINATES.y;
-                const steppedX = WAREHOUSE_COORDINATES.x + (destX - WAREHOUSE_COORDINATES.x) * nextProgress;
-                const steppedY = WAREHOUSE_COORDINATES.y + (destY - WAREHOUSE_COORDINATES.y) * nextProgress;
-
-                return {
-                  ...v,
-                  progress: nextProgress,
-                  x: steppedX,
-                  y: steppedY
-                };
-              }
-            }
-
-            // Returning transited craft back to logistics hub
-            if (v.status === 'returning') {
-              const nextProgress = v.progress - v.speed * simulationSpeed;
-              if (nextProgress <= 0) {
-                // Craft safely locked in warehouse
-                completedVehicles.push(v.id);
-                return {
-                  ...v,
-                  status: 'idle',
-                  progress: 0,
-                  x: WAREHOUSE_COORDINATES.x,
-                  y: WAREHOUSE_COORDINATES.y,
-                  currentOrderId: undefined,
-                  currentDestination: undefined
-                };
-              } else {
-                // Retracting coordinates
-                const destNode = hospitals.find(h => h.id === v.currentDestination?.id);
-                const destX = destNode ? destNode.coordinates.x : WAREHOUSE_COORDINATES.x;
-                const destY = destNode ? destNode.coordinates.y : WAREHOUSE_COORDINATES.y;
-                const steppedX = WAREHOUSE_COORDINATES.x + (destX - WAREHOUSE_COORDINATES.x) * nextProgress;
-                const steppedY = WAREHOUSE_COORDINATES.y + (destY - WAREHOUSE_COORDINATES.y) * nextProgress;
-
-                return {
-                  ...v,
-                  progress: nextProgress,
-                  x: steppedX,
-                  y: steppedY
-                };
-              }
-            }
-
-            return v;
-          });
-        });
-
-        // 2. Process Deliveries state edits cleanly without nested state setters
-        if (deliveredOrders.length > 0) {
-          setOrders(prevOrders => {
-            return prevOrders.map(o => {
-              const matchesDelivery = deliveredOrders.find(d => d.orderId === o.id);
-              if (matchesDelivery && o.status !== 'delivered') {
-                return { ...o, status: 'delivered', deliveredAt: new Date().toISOString() };
-              }
-              return o;
+        // Automatic random store customer activity spike to simulate a busy retail environment
+        const chance = 0.05 * simulationSpeed;
+        if (Math.random() < chance && hospitals.length > 0 && items.length > 0) {
+          const randomHosp = hospitals[Math.floor(Math.random() * hospitals.length)];
+          const randomItemsList: { sku: string; name: string; quantity: number }[] = [];
+          
+          // Select 1 to 2 random items to require restocking
+          const itemsToPick = [...items].sort(() => 0.5 - Math.random()).slice(0, Math.floor(1 + Math.random() * 2));
+          itemsToPick.forEach(i => {
+            randomItemsList.push({
+              sku: i.sku,
+              name: i.name,
+              quantity: Math.floor(4 + Math.random() * 12)
             });
           });
-        }
 
-        // 3. Construct and emit real non-nested logs with unique random hashes
-        const newLogs: ActivityLog[] = [];
-        const timestampStr = new Date().toISOString();
-        const nowMs = Date.now();
-
-        deliveredOrders.forEach((d, index) => {
-          newLogs.push({
-            id: `log-deliver-${nowMs}-${d.orderId}-${index}-${Math.random().toString(36).substr(2, 4)}`,
-            timestamp: timestampStr,
-            type: 'order_delivered',
-            message: `🚚 SUCCESS: Supply package ${d.orderId} successfully checked in at ${d.hospitalName}. Medical kits accepted into active surgery inventory.`,
-            severity: 'info'
+          handleAddOrder({
+            hospitalId: randomHosp.id,
+            hospitalName: randomHosp.name,
+            items: randomItemsList,
+            priority: Math.random() > 0.8 ? 'urgent' : 'routine',
+            status: 'requested'
           });
-        });
-
-        completedVehicles.forEach((vid, index) => {
-          const vref = vehicles.find(vec => vec.id === vid);
-          newLogs.push({
-            id: `log-return-${nowMs}-${vid}-${index}-${Math.random().toString(36).substr(2, 4)}`,
-            timestamp: timestampStr,
-            type: 'replenish',
-            message: `🛡️ FLEET UPDATE: Transport vehicle ${vref?.name || vid} has returned to Hub. Refitted standard bio-safety protocols.`,
-            severity: 'info'
-          });
-        });
-
-        if (newLogs.length > 0) {
-          setLogs(l => [...newLogs, ...l]);
         }
-
-      }, 100);
+      }, 4000);
     }
 
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [simulationRunning, simulationSpeed, hospitals, vehicles]);
+  }, [simulationRunning, simulationSpeed, hospitals, items]);
 
   // --- Handlers & Actions ---
 
-  // Register brand new hospital node
+  // Register brand new retail branch outlet
   const handleAddHospital = (newHosp: HospitalNode) => {
     setHospitals(prev => [...prev, newHosp]);
     const addLog: ActivityLog = {
       id: `log-hosp-add-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       type: 'replenish',
-      message: `🏥 NODE INSTABILITY PROTOCOL: Successfully registered new healthcare center "${newHosp.name}" into regional telemetry grid at coordinates [${newHosp.coordinates.x}x, ${newHosp.coordinates.y}y]. Connection established.`,
+      message: `🏢 NEW BRANCH CONNECTED: Registered new retail/pharmacy branch "${newHosp.name}" into regional distribution ledger at coordinates [${newHosp.coordinates.x}x, ${newHosp.coordinates.y}y].`,
       severity: 'info'
     };
     setLogs(l => [addLog, ...l]);
   };
 
-  // Edit hospital node details
+  // Edit hospital/retailer details
   const handleEditHospital = (updatedHosp: HospitalNode) => {
     setHospitals(prev => prev.map(h => h.id === updatedHosp.id ? updatedHosp : h));
     setOrders(prev => prev.map(o => o.hospitalId === updatedHosp.id ? { ...o, hospitalName: updatedHosp.name } : o));
@@ -301,7 +198,7 @@ export default function App() {
       id: `log-hosp-edit-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       type: 'replenish',
-      message: `⚙️ HOSPITAL METADATA UPDATED: Telemetry parameters for "${updatedHosp.name}" (ID: ${updatedHosp.id}) updated. Coordinates: [${updatedHosp.coordinates.x}x, ${updatedHosp.coordinates.y}y].`,
+      message: `⚙️ BRANCH METADATA UPDATED: Parametres for "${updatedHosp.name}" (ID: ${updatedHosp.id}) updated successfully. Coordinates: [${updatedHosp.coordinates.x}x, ${updatedHosp.coordinates.y}y].`,
       severity: 'info'
     };
     setLogs(l => [editLog, ...l]);
@@ -526,13 +423,12 @@ export default function App() {
     });
   };
 
-  // 3. Dispatch & schedule active vehicle (subtracts items from inventory)
-  const handleDispatchOrder = (orderId: string, vehicleId: string) => {
+  // 3. Approve and Deliver Order Instantly (deducts from depot, credits to retailer node)
+  const handleDispatchOrder = (orderId: string) => {
     const targetOrder = orders.find(o => o.id === orderId);
-    const targetVehicle = vehicles.find(v => v.id === vehicleId);
-    const targetHosp = hospitals.find(h => h.id === targetOrder?.hospitalId);
-
-    if (!targetOrder || !targetVehicle || !targetHosp) return;
+    if (!targetOrder) return;
+    const targetHosp = hospitals.find(h => h.id === targetOrder.hospitalId);
+    if (!targetHosp) return;
 
     // Deduct items from Central Hub inventory simulation
     setItems(prevItems => {
@@ -549,49 +445,39 @@ export default function App() {
       });
     });
 
-    // Transit scheduling
-    setVehicles(prevVehicles => {
-      return prevVehicles.map(veh => {
-        if (veh.id === vehicleId) {
-          return {
-            ...veh,
-            status: 'en-route',
-            currentOrderId: orderId,
-            progress: 0,
-            x: WAREHOUSE_COORDINATES.x,
-            y: WAREHOUSE_COORDINATES.y,
-            currentDestination: {
-              id: targetHosp.id,
-              x: targetHosp.coordinates.x,
-              y: targetHosp.coordinates.y,
-              name: targetHosp.name
-            }
-          };
-        }
-        return veh;
+    // Credit delivered items directly to target retailer node's inventory inside distributor registries
+    setNodeInventories(prevInv => {
+      const nextInv = { ...prevInv };
+      const nodeId = targetOrder.hospitalId;
+      if (!nextInv[nodeId]) {
+        nextInv[nodeId] = {};
+      }
+      targetOrder.items.forEach(it => {
+        nextInv[nodeId][it.sku] = (nextInv[nodeId][it.sku] || 0) + it.quantity;
       });
+      return nextInv;
     });
 
-    // Update Order Status to in-transit
+    // Update Order Status to delivered immediately
     setOrders(prevOrders => {
       return prevOrders.map(ord => {
         if (ord.id === orderId) {
           return {
             ...ord,
-            status: 'in-transit',
-            vehicleId
+            status: 'delivered',
+            deliveredAt: new Date().toISOString()
           };
         }
         return ord;
       });
     });
 
-    // Log the departure event
+    // Log the immediate fulfillment event
     const departureLog: ActivityLog = {
       id: `log-dispatch-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
-      type: 'order_dispatched',
-      message: `🛫 DEPARTURE COMMENCED: ${targetVehicle.name} dispatched from central depot carrying emergency transit ${orderId} to ${targetHosp.name}.`,
+      type: 'order_delivered',
+      message: `🚚 DIRECT SHIPMENT COMPLETED: Purchase order ${orderId} approved and immediately delivered to ${targetHosp.name}. Retail shelves updated.`,
       severity: targetOrder.priority === 'critical' ? 'critical' : 'info'
     };
     setLogs(l => [departureLog, ...l]);
@@ -604,7 +490,7 @@ export default function App() {
       id: `log-cancel-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       type: 'alert',
-      message: `❌ DEPROVISIONED: Surgical supply protocol ${orderId} has been manually cancelled by Command Center. Material returned to inventory slots.`,
+      message: `❌ DEPROVISIONED: Refill purchase protocol ${orderId} has been manually cancelled by Wholesale HQ.`,
       severity: 'warning'
     };
     setLogs(l => [cancelLog, ...l]);
@@ -617,15 +503,96 @@ export default function App() {
       id: `log-order-edit-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       type: 'order_placed',
-      message: `📑 REQUEST AMENDED: Order ${updatedOrder.id} dispatch parameters reformulated by Logistics command. Priority: ${updatedOrder.priority.toUpperCase()}. Cost Adjusted.`,
+      message: `📑 REQUEST AMENDED: Order ${updatedOrder.id} dispatch parameters reformulated by logistics. Urgency: ${updatedOrder.priority.toUpperCase()}. Cost Adjusted.`,
       severity: updatedOrder.priority === 'critical' ? 'critical' : 'info'
     };
     setLogs(l => [editLog, ...l]);
   };
 
-  // 5. Simulate Random Surgical / Trauma Event (Generates sudden real-time hospital orders)
+  // Stock Redistribution Handler (Balances items between outlets)
+  const handleTransferStock = (sku: string, sourceId: string, destId: string, quantity: number) => {
+    if (sourceId === 'CENTRAL_DEPOT') {
+      const matchedItem = items.find(i => i.sku === sku);
+      if (!matchedItem || matchedItem.stockLevel < quantity) {
+        return { success: false, message: "Insufficient stock level in the Central Depot." };
+      }
+      
+      setItems(prevItems => prevItems.map(i => {
+        if (i.sku === sku) {
+          return { ...i, stockLevel: i.stockLevel - quantity, lastUpdated: new Date().toLocaleTimeString() };
+        }
+        return i;
+      }));
+
+      setNodeInventories(prev => {
+        const next = { ...prev };
+        if (!next[destId]) next[destId] = {};
+        next[destId][sku] = (next[destId][sku] || 0) + quantity;
+        return next;
+      });
+
+      const logTransfer: ActivityLog = {
+        id: `log-redistrib-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        timestamp: new Date().toISOString(),
+        type: 'replenish',
+        message: `📦 DEPOT REDISTRIBUTION: Transited ${quantity}x of ${sku} from Central Depot to Retail Outlet "${hospitals.find(h => h.id === destId)?.name || destId}".`,
+        severity: 'info'
+      };
+      setLogs(prev => [logTransfer, ...prev]);
+
+      return { success: true, message: `Transited ${quantity}x units of ${sku} from Central Depot successfully!` };
+    } else {
+      const sourceStockAvailable = nodeInventories[sourceId]?.[sku] || 0;
+      if (sourceStockAvailable < quantity) {
+        return { success: false, message: `Insufficient stock level at Selected Source Retailer node.` };
+      }
+
+      setNodeInventories(prev => {
+        const next = { ...prev };
+        
+        if (next[sourceId]) {
+          next[sourceId][sku] = Math.max(0, (next[sourceId][sku] || 0) - quantity);
+        }
+
+        const realDestId = destId === 'CENTRAL_DEPOT' ? 'CENTRAL_DEPOT' : destId;
+        if (realDestId === 'CENTRAL_DEPOT') {
+          setItems(prevItems => prevItems.map(i => {
+            if (i.sku === sku) {
+              return { ...i, stockLevel: i.stockLevel + quantity, lastUpdated: new Date().toLocaleTimeString() };
+            }
+            return i;
+          }));
+        } else {
+          if (!next[realDestId]) next[realDestId] = {};
+          next[realDestId][sku] = (next[realDestId][sku] || 0) + quantity;
+        }
+
+        return next;
+      });
+
+      const sourceName = hospitals.find(h => h.id === sourceId)?.name || sourceId;
+      const destName = destId === 'CENTRAL_DEPOT' ? 'Central Depot' : (hospitals.find(h => h.id === destId)?.name || destId);
+      
+      const logTransfer: ActivityLog = {
+        id: `log-redistrib-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        timestamp: new Date().toISOString(),
+        type: 'replenish',
+        message: `🔄 INTER-NODE BALANCING: Transferred ${quantity}x of ${sku} directly from "${sourceName}" to "${destName}". Stock balanced successfully.`,
+        severity: 'info'
+      };
+      setLogs(prev => [logTransfer, ...prev]);
+
+      return { 
+        success: true, 
+        message: `Successfully redistributed ${quantity}x of ${sku} from ${sourceName.slice(0, 20)} to ${destName.slice(0, 20)}!` 
+      };
+    }
+  };
+
+  // 5. Simulate Random Wholesale Shopping Rush Event (Generates sudden real-time hospital orders)
   const triggerRandomTraumaSurgery = () => {
-    // Pick a random hospital node
+    if (hospitals.length === 0) return;
+    // Pick a random store outlet
     const randomHospital = hospitals[Math.floor(Math.random() * hospitals.length)];
     
     // Select 1 to 2 random surgical items to kit up
@@ -636,7 +603,7 @@ export default function App() {
       randomItems.push({
         sku: i.sku,
         name: i.name,
-        quantity: Math.floor(3 + Math.random() * 12)
+        quantity: Math.floor(5 + Math.random() * 15)
       });
     });
 
@@ -651,12 +618,12 @@ export default function App() {
       status: 'requested'
     });
 
-    // Alert Log for Emergency trauma notification
+    // Alert Log for checkout notification
     const surgeryAlert: ActivityLog = {
       id: `log-surgery-alert-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       type: 'alert',
-      message: `🚨 SURGERY EVENT COMPROMISE: Sudden emergency trauma alert received from ${randomHospital.name}. High-volume surgical materials requested immediately!`,
+      message: `🚨 DEMAND SPIKE: Sudden high-volume consumer refill request processed from ${randomHospital.name}. Approve immediately.`,
       severity: 'critical'
     };
     setLogs(l => [surgeryAlert, ...l]);
@@ -665,23 +632,21 @@ export default function App() {
   // 6. Complete Reset to pristine presets
   const handleTriggerFactoryRestore = () => {
     localStorage.removeItem('surg_items');
-    localStorage.removeItem('surg_vehicles');
     localStorage.removeItem('surg_orders');
     localStorage.removeItem('surg_logs');
     localStorage.removeItem('surg_suppliers');
     localStorage.removeItem('surg_hospitals');
     setItems(INITIAL_ITEMS);
-    setVehicles(INITIAL_VEHICLES);
     setOrders(INITIAL_ORDERS);
     setLogs(INITIAL_LOGS);
     setHospitals(INITIAL_HOSPITALS);
     setSuppliers([
-      "Apex Surgical Inc.", 
-      "OsteoMed Devices", 
-      "Ethicon Logistics", 
-      "SurgiCraft Co.", 
-      "Guardian Protective", 
-      "Vascutech Biotech"
+      "Sun Pharmaceutical Industries Ltd.",
+      "Biocon Ltd.",
+      "Dr. Reddy's Laboratories",
+      "Lupin Pharmaceuticals",
+      "Cipla Ltd.",
+      "Divi's Laboratories"
     ]);
     setSelectedHospital(null);
   };
@@ -716,20 +681,20 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-white font-sans uppercase">Surgical Supply Chain</h1>
-                <span className="text-[10px] bg-slate-900 text-cyan-400 border border-slate-800 rounded px-1.5 font-mono">REGIONAL HUB</span>
+                <h1 className="text-lg font-bold tracking-tight text-white font-sans uppercase">Pharmaceutical Distributor Hub</h1>
+                <span className="text-[10px] bg-slate-900 text-cyan-400 border border-slate-800 rounded px-1.5 font-mono">REGIONAL LEDGER</span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">Telemetry coordinates: Zone 9-North East • Automated Emergency Dispatch Module</p>
+              <p className="text-xs text-slate-400 font-mono">Wholesale Operations Portal • Automated Store Refill Management</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            {/* Quick Action: Trigger sudden Trauma Disaster Surgery */}
+            {/* Quick Action: Trigger sudden Wholesale Shopping Rush */}
             <button
               onClick={triggerRandomTraumaSurgery}
               className="flex-1 sm:flex-initial px-3.5 py-2 bg-gradient-to-r from-red-650 to-rose-600 hover:from-red-600 hover:to-rose-500 transition-all text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-red-950 cursor-pointer"
             >
-              <Flame className="w-3.5 h-3.5 text-white animate-pulse" /> Simulate Trauma Event
+              <Flame className="w-3.5 h-3.5 text-white animate-pulse" /> Simulate Consumer Demand Spike
             </button>
 
             {/* Time Control Dashboard */}
@@ -867,7 +832,6 @@ export default function App() {
           <div className="lg:col-span-7 flex flex-col">
             <InteractiveLogisticsMap
               hospitals={hospitals}
-              vehicles={vehicles}
               orders={orders}
               onSelectHospital={setSelectedHospital}
               selectedHospital={selectedHospital}
@@ -881,7 +845,6 @@ export default function App() {
               orders={orders}
               hospitals={hospitals}
               items={items}
-              vehicles={vehicles}
               onAddOrder={handleAddOrder}
               onDispatchOrder={handleDispatchOrder}
               onCancelOrder={handleCancelOrder}
@@ -927,13 +890,12 @@ export default function App() {
               items={items}
               hospitals={hospitals}
               orders={orders}
-              vehicles={vehicles}
             />
 
             {/* Live command logs telemetry stream */}
             <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md flex flex-col h-[280px]">
               <h2 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-300 pb-2.5 border-b border-slate-800/80 mb-3 flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-indigo-400" /> Logistics Telemetry Data Feed
+                <Database className="w-3.5 h-3.5 text-indigo-400" /> Distributor Telemetry Data Feed
               </h2>
 
               <div className="flex-1 overflow-y-auto space-y-2.5 font-mono text-[10px] text-slate-400 pr-1">
@@ -959,7 +921,17 @@ export default function App() {
           </div>
         </div>
 
-        {/* Desktop Third Row: Billing & Document Letterhead Center */}
+        {/* Desktop Third Row: Stock Redistribution Management Deck */}
+        <div className="hidden lg:block">
+          <RedistributionHub
+            items={items}
+            hospitals={hospitals}
+            nodeInventories={nodeInventories}
+            onTransfer={handleTransferStock}
+          />
+        </div>
+
+        {/* Desktop Fourth Row: Billing & Document Letterhead Center */}
         <div className="hidden lg:block">
           <BillingLetterhead
             hospitals={hospitals}
@@ -977,7 +949,6 @@ export default function App() {
             <div className="space-y-5">
               <InteractiveLogisticsMap
                 hospitals={hospitals}
-                vehicles={vehicles}
                 orders={orders}
                 onSelectHospital={setSelectedHospital}
                 selectedHospital={selectedHospital}
@@ -987,7 +958,6 @@ export default function App() {
                 orders={orders}
                 hospitals={hospitals}
                 items={items}
-                vehicles={vehicles}
                 onAddOrder={handleAddOrder}
                 onDispatchOrder={handleDispatchOrder}
                 onCancelOrder={handleCancelOrder}
@@ -1026,6 +996,12 @@ export default function App() {
                 onRemoveSupplier={handleRemoveSupplier}
                 onEditSupplier={handleEditSupplier}
               />
+              <RedistributionHub
+                items={items}
+                hospitals={hospitals}
+                nodeInventories={nodeInventories}
+                onTransfer={handleTransferStock}
+              />
             </div>
           )}
 
@@ -1036,12 +1012,11 @@ export default function App() {
                 items={items}
                 hospitals={hospitals}
                 orders={orders}
-                vehicles={vehicles}
               />
               
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md flex flex-col h-[300px]">
                 <h2 className="text-xs font-semibold uppercase font-mono tracking-wider text-slate-300 pb-2.5 border-b border-slate-800/80 mb-3 flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-indigo-400" /> Logistics Telemetry Data Feed
+                  <Database className="w-3.5 h-3.5 text-indigo-400" /> Distributor Telemetry Data Feed
                 </h2>
 
                 <div className="flex-1 overflow-y-auto space-y-2.5 font-mono text-[10px] text-slate-400 pr-1">
@@ -1083,7 +1058,7 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className="mt-12 text-center text-xs text-slate-500 font-mono">
-        <p>© 2026 Emergency Surgical supply chain network • Municipal Medical Logistics Center • Node AI-v3.0</p>
+        <p>© 2026 Wholesale & Distributor supply chain network • Retailer Refill System</p>
       </footer>
     </div>
   );

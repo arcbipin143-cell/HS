@@ -15,6 +15,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 500,
     unit: "box of 100",
     unitPrice: 850.0,
+    wholesalePrice: 650.0,
     supplier: "Sun Pharmaceutical Industries Ltd.",
     lastUpdated: "2026-05-29"
   },
@@ -27,6 +28,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 100,
     unit: "sterile unit",
     unitPrice: 4500.0,
+    wholesalePrice: 3400.0,
     supplier: "Biocon Ltd.",
     lastUpdated: "2026-05-28"
   },
@@ -39,6 +41,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 300,
     unit: "box of 36",
     unitPrice: 1800.0,
+    wholesalePrice: 1350.0,
     supplier: "Dr. Reddy's Laboratories",
     lastUpdated: "2026-05-29"
   },
@@ -51,6 +54,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 40,
     unit: "unit",
     unitPrice: 8900.0,
+    wholesalePrice: 6800.0,
     supplier: "Lupin Pharmaceuticals",
     lastUpdated: "2026-05-27"
   },
@@ -63,6 +67,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 30,
     unit: "sterile kit",
     unitPrice: 12500.0,
+    wholesalePrice: 9500.0,
     supplier: "Sun Pharmaceutical Industries Ltd.",
     lastUpdated: "2026-05-29"
   },
@@ -75,6 +80,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 1000,
     unit: "box of 100",
     unitPrice: 1200.0,
+    wholesalePrice: 900.0,
     supplier: "Cipla Ltd.",
     lastUpdated: "2026-05-29"
   },
@@ -87,6 +93,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 500,
     unit: "pack of 50",
     unitPrice: 3500.0,
+    wholesalePrice: 2650.0,
     supplier: "Cipla Ltd.",
     lastUpdated: "2026-05-28"
   },
@@ -99,6 +106,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 25,
     unit: "pack of 3",
     unitPrice: 7500.0,
+    wholesalePrice: 5800.0,
     supplier: "Biocon Ltd.",
     lastUpdated: "2026-05-25"
   },
@@ -111,6 +119,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 15,
     unit: "sterile piece",
     unitPrice: 32000.0,
+    wholesalePrice: 24500.0,
     supplier: "Zydus Lifesciences",
     lastUpdated: "2026-05-22"
   },
@@ -123,6 +132,7 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
     capacity: 250,
     unit: "pack of 10",
     unitPrice: 950.0,
+    wholesalePrice: 700.0,
     supplier: "Dr. Reddy's Laboratories",
     lastUpdated: "2026-05-29"
   }
@@ -131,8 +141,8 @@ export const INITIAL_ITEMS: SurgicalItem[] = [
 export const INITIAL_HOSPITALS: HospitalNode[] = [
   {
     id: "H-AIIMS",
-    name: "AIIMS Apex Trauma Centre, New Delhi",
-    type: "Trauma Center",
+    name: "AIIMS Plaza Retail Pharmacy, New Delhi",
+    type: "Retail Pharmacy Center",
     coordinates: { x: 42, y: 22 },
     urgency: "high",
     contactNumber: "+91 11-26588500",
@@ -140,73 +150,49 @@ export const INITIAL_HOSPITALS: HospitalNode[] = [
   },
   {
     id: "H-APOLLO",
-    name: "Apollo Hospital Main Centre, Chennai",
-    type: "Surgical Pavilion",
+    name: "Apollo Retail Pharmacy Center, Chennai",
+    type: "Retail Pharmacy Center",
     coordinates: { x: 55, y: 78 },
     urgency: "medium",
     contactNumber: "+91 44-28290200",
     address: "Greams Road, Thousand Lights, Chennai 600006"
   },
   {
-    id: "H-FORTIS",
-    name: "Fortis Hospital & Cardiac Care, Mumbai",
-    type: "Trauma Center",
-    coordinates: { x: 25, y: 56 },
-    urgency: "high",
-    contactNumber: "+91 22-67994111",
-    address: "Mulund West, Goregaon-Mulund Link Road, Mumbai 400078"
+    id: "H-AUSHADHI",
+    name: "Jan Aushadhi Retail Pharmacy, Zone-6",
+    type: "Retail Pharmacy Center",
+    coordinates: { x: 78, y: 28 },
+    urgency: "medium",
+    contactNumber: "+91 11-23061144",
+    address: "Paharganj Sector Hub, New Delhi 110055"
   },
   {
-    id: "H-NARAYANA",
-    name: "Narayana Institute of Cardiac Sciences",
-    type: "Childrens Hospital",
-    coordinates: { x: 48, y: 72 },
+    id: "H-SANJIVANI",
+    name: "Sanjivani Medicals Franchise #14",
+    type: "Retail Pharmacy Center",
+    coordinates: { x: 18, y: 38 },
     urgency: "low",
-    contactNumber: "+91 80-71222222",
-    address: "Bommasandra Industrial Area, Bengaluru 560099"
+    contactNumber: "+91 22-98421054",
+    address: "Andheri West, Link Road, Mumbai 405521"
+  },
+  {
+    id: "H-FRANCHISE-CENTRAL",
+    name: "Max Health Distribution Franchise Hub",
+    type: "Franchise Distribution Hub",
+    coordinates: { x: 68, y: 64 },
+    urgency: "high",
+    contactNumber: "+91 80-44919593",
+    address: "Whitefield Main Rd, Bengaluru 560066"
   }
 ];
 
 export const WAREHOUSE_COORDINATES = { x: 45, y: 50, name: "Pradhan Mantri Jan Aushadhi Central Depot" };
 
-export const INITIAL_VEHICLES: LogisticsVehicle[] = [
-  {
-    id: "V-COURIER",
-    name: "Emergency Bio-Courier (V-1)",
-    type: "emergency-courier",
-    status: "idle",
-    speed: 0.04, // fastest
-    progress: 0,
-    x: 45,
-    y: 50
-  },
-  {
-    id: "V-THERMO",
-    name: "Thermo-Secure Logistics (V-2)",
-    type: "refrigerated-truck",
-    status: "idle",
-    speed: 0.015, // slowest, safe cooling
-    progress: 0,
-    x: 45,
-    y: 50
-  },
-  {
-    id: "V-CARGO",
-    name: "Surgical Supply Van (V-3)",
-    type: "cargo-van",
-    status: "idle",
-    speed: 0.025, // medium
-    progress: 0,
-    x: 45,
-    y: 50
-  }
-];
-
 export const INITIAL_ORDERS: DispatchOrder[] = [
   {
     id: "ORD-1001",
     hospitalId: "H-AIIMS",
-    hospitalName: "AIIMS Apex Trauma Centre, New Delhi",
+    hospitalName: "AIIMS Plaza Retail Pharmacy, New Delhi",
     items: [
       { sku: "S-SPEC-005", name: "Angioplasty Balloon Catheter Kit", quantity: 3 },
       { sku: "S-INST-004", name: "Micro-vascular Forceps (Curved)", quantity: 4 }
@@ -218,15 +204,14 @@ export const INITIAL_ORDERS: DispatchOrder[] = [
   },
   {
     id: "ORD-1002",
-    hospitalId: "H-NARAYANA",
-    hospitalName: "Narayana Institute of Cardiac Sciences",
+    hospitalId: "H-AUSHADHI",
+    hospitalName: "Jan Aushadhi Retail Pharmacy, Zone-6",
     items: [
       { sku: "S-INST-001", name: "Carbon Steel Surgical Blades (No. 11)", quantity: 5 },
       { sku: "S-CONS-010", name: "Povidone-Iodine Sterile Scrub Pads", quantity: 2 }
     ],
     priority: "routine",
-    status: "preparing",
-    vehicleId: "V-CARGO",
+    status: "delivered",
     totalCost: 6150.00,
     createdAt: "2026-05-29T09:10:00Z"
   }
@@ -244,21 +229,21 @@ export const INITIAL_LOGS: ActivityLog[] = [
     id: "log-2",
     timestamp: "2026-05-29T08:15:00Z",
     type: "order_placed",
-    message: "CRITICAL order ORD-1001 placed by AIIMS Apex Trauma Centre, New Delhi for urgent bypass components.",
+    message: "CRITICAL order ORD-1001 placed by AIIMS Plaza Retail Pharmacy, New Delhi for stock replenishment.",
     severity: "warning"
   },
   {
     id: "log-3",
     timestamp: "2026-05-29T09:10:00Z",
     type: "order_placed",
-    message: "Routine order ORD-1002 registered for Narayana Institute of Cardiac Sciences, Bengaluru.",
+    message: "Routine order ORD-1002 registered for Jan Aushadhi Retail Pharmacy, Zone-6.",
     severity: "info"
   },
   {
     id: "log-4",
     timestamp: "2026-05-29T09:20:00Z",
     type: "replenish",
-    message: "Bulk replenishment successful: +200 Sterile Latex Surgical Gloves added from safe reserve.",
+    message: "Bulk replenishment successful: +200 Sterile Latex Surgical Gloves added to central distributor stock.",
     severity: "info"
   }
 ];

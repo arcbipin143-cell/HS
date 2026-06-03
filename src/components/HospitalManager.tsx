@@ -45,7 +45,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
   const [editingHospitalId, setEditingHospitalId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [type, setType] = useState<HospitalNode['type']>('Trauma Center');
+  const [type, setType] = useState<HospitalNode['type']>('Retail Pharmacy Center');
   const [coordX, setCoordX] = useState<number>(35);
   const [coordY, setCoordY] = useState<number>(35);
   const [urgency, setUrgency] = useState<HospitalNode['urgency']>('medium');
@@ -80,7 +80,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
 
   const handleCancel = () => {
     setName('');
-    setType('Trauma Center');
+    setType('Retail Pharmacy Center');
     setCoordX(35);
     setCoordY(35);
     setUrgency('medium');
@@ -94,25 +94,25 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    const trimmedContact = contactNumber.trim() || "+1 (555) 000-0000";
-    const trimmedAddress = address.trim() || "Local Logistics District";
+    const trimmedContact = contactNumber.trim() || "+91-98765-43210";
+    const trimmedAddress = address.trim() || "Local Retail Hub District";
 
     if (!trimmedName) {
-      setErrorMsg('Hospital Node Name is required.');
+      setErrorMsg('Retailer Node Name is required.');
       return;
     }
 
-    if (!editingHospitalId && hospitals.some(h => h.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setErrorMsg('A hospital node with this name is already registered.');
+    if (!editingHospitalId && hospitals.some(h => hospNameMatch(h.name, trimmedName))) {
+      setErrorMsg('A retailer outlet with this name is already registered.');
       return;
     }
 
-    if (editingHospitalId && hospitals.some(h => h.id !== editingHospitalId && h.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setErrorMsg('Another hospital node with this name is already registered.');
+    if (editingHospitalId && hospitals.some(h => h.id !== editingHospitalId && hospNameMatch(h.name, trimmedName))) {
+      setErrorMsg('Another retailer outlet with this name is already registered.');
       return;
     }
 
-    // Coordinates safety checks (bound within 5-95 so they render perfectly on our SVG map)
+    // Coordinates safety checks (bound within 5-95)
     const refinedX = Math.min(95, Math.max(5, coordX));
     const refinedY = Math.min(95, Math.max(5, coordY));
 
@@ -142,15 +142,17 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
     handleCancel();
   };
 
+  const hospNameMatch = (n1: string, n2: string) => n1.toLowerCase() === n2.toLowerCase();
+
   return (
     <div className="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md" id="hospital-manager-root">
       {/* Header Panel */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3" id="hospital-manager-header">
         <div>
           <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-cyan-400" /> Hospital Node Registry
+            <Building2 className="w-4 h-4 text-cyan-400" /> Retail Outlet & Pharmacy Registry
           </h2>
-          <p className="text-xs text-slate-400">Add trauma units and surgical clinics directly to the tracking coordinate grid.</p>
+          <p className="text-xs text-slate-400">Add retail franchise counters, regional stores, and franchise distribution channels establishing direct distributor tracking.</p>
         </div>
 
         <button
@@ -167,7 +169,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
               : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-md shadow-cyan-950/20 border border-cyan-500/20'
           }`}
         >
-          {showAddForm ? (editingHospitalId ? 'Cancel Editing' : 'Cancel Registration') : 'Register New Hospital'}
+          {showAddForm ? (editingHospitalId ? 'Cancel Editing' : 'Cancel Registration') : 'Register New Retailer'}
         </button>
       </div>
 
@@ -176,9 +178,9 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
         <form onSubmit={handleSubmit} className="mb-5 p-4 rounded-xl bg-slate-950 border border-cyan-900/40 space-y-4 shadow-inner">
           <div className="flex justify-between items-center border-b border-slate-900 pb-2">
             <h3 className="text-xs font-semibold font-mono text-cyan-400 tracking-wider uppercase flex items-center gap-1">
-              <Crosshair className="w-3.5 h-3.5 animate-pulse" /> {editingHospitalId ? `EDIT HOSPITAL NODE: ${editingHospitalId}` : 'CONFIGURING COORDINATES'}
+              <Crosshair className="w-3.5 h-3.5 animate-pulse" /> {editingHospitalId ? `EDIT OUTLET SPECIFICATION: ${editingHospitalId}` : 'CONFIGURING ASSOCIATES'}
             </h3>
-            <span className="text-[10px] text-slate-500 font-mono">Telemetry Input Zone</span>
+            <span className="text-[10px] text-slate-500 font-mono">Location Input Zone</span>
           </div>
 
           {errorMsg && (
@@ -190,10 +192,10 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Hospital Name *</label>
+              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Retailer Outlet / Pharmacy Name *</label>
               <input
                 type="text"
-                placeholder="e.g. Metro Trauma & Surgical Hub"
+                placeholder="e.g. Sanjivani Pharma Zone"
                 value={name}
                 required
                 onChange={(e) => setName(e.target.value)}
@@ -202,16 +204,14 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
             </div>
             
             <div>
-              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Medical Facility Type</label>
+              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Associate Outlet Type</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as HospitalNode['type'])}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none cursor-pointer"
               >
-                <option value="Trauma Center">Trauma Center (Level I-III)</option>
-                <option value="Surgical Pavilion">Surgical Pavilion</option>
-                <option value="Childrens Hospital">Childrens Hospital</option>
-                <option value="Outpatient Clinic">Outpatient Clinic</option>
+                <option value="Retail Pharmacy Center">Retail Pharmacy Center</option>
+                <option value="Franchise Distribution Hub">Franchise Distribution Hub</option>
               </select>
             </div>
           </div>
@@ -220,7 +220,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
           <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800/80 space-y-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <span className="text-[10px] font-mono text-slate-300 font-semibold uppercase tracking-wider flex items-center gap-1">
-                <Compass className="w-3.5 h-3.5 text-cyan-400" /> Grid Coordinates & Map Presets
+                <Compass className="w-3.5 h-3.5 text-cyan-400" /> Regional Map Distribution Coordinates
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
@@ -302,7 +302,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
               <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Physical Address</label>
               <input
                 type="text"
-                placeholder="e.g. 550 Medical Plaza, Northwest District"
+                placeholder="e.g. 100 Jan-Aushadhi Marg, Block C"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-700"
@@ -310,10 +310,10 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
             </div>
             
             <div>
-              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Contact Hotline</label>
+              <label className="block text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-wide">Representative Hotline</label>
               <input
                 type="text"
-                placeholder="e.g. +1 (555) 762-9900"
+                placeholder="e.g. +91 94444 11000"
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-700 font-mono"
@@ -322,7 +322,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
-            <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wide">Initial Supply Urgency</label>
+            <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wide">Replenishment Priority / Status Alert Trigger</label>
             <div className="grid grid-cols-3 gap-2">
               {(['low', 'medium', 'high'] as HospitalNode['urgency'][]).map((urg) => (
                 <button
@@ -355,7 +355,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
               type="submit"
               className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white text-xs font-semibold rounded-lg cursor-pointer transition-all shadow-md shadow-cyan-950/20"
             >
-              {editingHospitalId ? 'Update Node Specs' : 'Register Node'}
+              {editingHospitalId ? 'Update Outlet Design' : 'Add Outlet'}
             </button>
           </div>
         </form>
@@ -366,21 +366,21 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
         {hospitals.length === 0 ? (
           <div className="text-center py-10 text-slate-500 font-mono text-xs border border-dashed border-slate-800 rounded-lg">
             <Building2 className="w-8 h-8 text-slate-800 mx-auto mb-2 animate-pulse" />
-            No hospital nodes currently registered in regional command framework.
+            No retailer outlets currently registered.
           </div>
         ) : (
           hospitals.map((hosp) => {
             const urgencyBadge = (
               <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-extrabold uppercase border ${
-                hosp.urgency === 'high' ? 'bg-red-950/80 text-red-400 border-red-800' :
+                hosp.urgency === 'high' ? 'bg-red-950/80 text-red-400 border-red-800 animate-pulse' :
                 hosp.urgency === 'medium' ? 'bg-amber-950/80 text-amber-400 border-amber-800' :
                 'bg-emerald-950/80 text-emerald-400 border-emerald-800'
               }`}>
-                {hosp.urgency}
+                {hosp.urgency === 'high' ? 'High Alert' : hosp.urgency === 'medium' ? 'Standard' : 'Low alert'}
               </span>
             );
 
-            const iconPrefix = hosp.type === 'Trauma Center' ? '🏥' : hosp.type === 'Surgical Pavilion' ? '🫀' : hosp.type === 'Childrens Hospital' ? '🧸' : '🩺';
+            const iconPrefix = hosp.type === 'Retail Pharmacy Center' ? '💊' : hosp.type === 'Franchise Distribution Hub' ? '📦' : '🏪';
 
             return (
               <div
@@ -426,7 +426,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
 
                   {deletingId === hosp.id ? (
                     <div className="flex items-center gap-1.5 bg-slate-900 border border-red-500/30 p-1.5 rounded-lg animate-fade-in">
-                      <span className="text-[10px] text-red-400 font-semibold font-mono px-1.5">Delete?</span>
+                      <span className="text-[10px] text-red-400 font-semibold font-mono px-1.5">Unlink outlet?</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -464,7 +464,7 @@ export const HospitalManager: React.FC<HospitalManagerProps> = ({
                         title={`Remove ${hosp.name}`}
                       >
                         <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        <span className="text-[11px] font-medium">Remove</span>
+                        <span className="text-[11px] font-medium">Unlink</span>
                       </button>
                     </div>
                   )}
